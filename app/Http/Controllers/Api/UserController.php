@@ -177,30 +177,45 @@ class UserController extends Controller
                 'status' => 0
             ], 404);
         } else {
-            DB::beginTransaction();
-            try {
-                $user->name = $request['name'];
-                $user->email  = $request['email'];
-                $user->contact  = $request['contact'];
-                $user->pincode  = $request['pincode'];
-                $user->address  = $request['address'];
-                $user->save();
-                DB::commit();
-            } catch (\Exception $e) {
-                DB::rollBack();
-                $user = null;
-            }
-            if (is_null($user)) {
-                return response()->json([
-                    'message' => "Internal Server Error",
-                    'status' => 0,
-                    'err_message' => $e->getMessage()
-                ], 500);
+            if (Hash::check($request['old_password'], $user->password)) {
+                if ($request['new_password'] == $request['confirm_password']) {
+                    DB::beginTransaction();
+                    try {
+                        $user->password = Hash::make($request['new_password']);
+                        $user->save();
+                        DB::commit();
+
+                        return response()->json([
+                            'message' => "Password Changed Success",
+                            'status' => 1
+                        ], 200);
+                    } catch (\Exception $e) {
+                        DB::rollBack();
+                        $user = null;
+                    }
+                    if (is_null($user)) {
+                        return response()->json([
+                            'message' => "Internal Server Error",
+                            'status' => 0,
+                            'err_message' => $e->getMessage()
+                        ], 500);
+                    } else {
+                        return response()->json([
+                            'message' => "Password Changed Successful",
+                            'status' => 1
+                        ], 200);
+                    }
+                } else {
+                    return response()->json([
+                        'message' => "Password Confirm Does't Matched",
+                        'status' => 0
+                    ], 404);
+                }
             } else {
                 return response()->json([
-                    'message' => "Data Updated Successfull",
-                    'status' => 1
-                ], 200);
+                    'message' => "Old Password Does't Matched",
+                    'status' => 0
+                ], 404);
             }
         }
     }
